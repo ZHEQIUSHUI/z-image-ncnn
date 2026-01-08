@@ -155,6 +155,10 @@ int main()
     const int steps = 9;
     const int seed = 777;
 
+    const int gpuid = ncnn::get_default_gpu_index();
+    const bool use_gpu = true;
+    const bool use_bf16 = true;
+
     // assert width % 16 == 0
     // assert height % 16 == 0
     // assert (width / 16) * (height / 16) >= 32
@@ -177,6 +181,13 @@ int main()
     ncnn::Mat cap;
     {
         ncnn::Net text_encoder;
+        text_encoder.opt.vulkan_device_index = gpuid;
+        text_encoder.opt.use_vulkan_compute = use_gpu;
+        text_encoder.opt.use_fp16_packed = false;
+        text_encoder.opt.use_fp16_storage = false;
+        text_encoder.opt.use_fp16_arithmetic = false;
+        text_encoder.opt.use_bf16_packed = use_bf16;
+        text_encoder.opt.use_bf16_storage = use_bf16;
         text_encoder.load_param("z_image_turbo_text_encoder.ncnn.param");
         text_encoder.load_model("z_image_turbo_text_encoder.ncnn.bin");
 
@@ -293,6 +304,13 @@ int main()
     ncnn::Mat cap_embed;
     {
         ncnn::Net cap_embedder;
+        cap_embedder.opt.vulkan_device_index = gpuid;
+        cap_embedder.opt.use_vulkan_compute = use_gpu;
+        cap_embedder.opt.use_fp16_packed = false;
+        cap_embedder.opt.use_fp16_storage = false;
+        cap_embedder.opt.use_fp16_arithmetic = false;
+        cap_embedder.opt.use_bf16_packed = use_bf16;
+        cap_embedder.opt.use_bf16_storage = use_bf16;
         cap_embedder.load_param("z_image_turbo_transformer_cap_embedder.ncnn.param");
         cap_embedder.load_model("z_image_turbo_transformer_cap_embedder.ncnn.bin");
 
@@ -306,11 +324,18 @@ int main()
     // context_refiner
     ncnn::Mat cap_refine;
     {
-        ncnn::Net noise_refiner;
-        noise_refiner.load_param("z_image_turbo_transformer_context_refiner.ncnn.param");
-        noise_refiner.load_model("z_image_turbo_transformer_context_refiner.ncnn.bin");
+        ncnn::Net context_refiner;
+        context_refiner.opt.vulkan_device_index = gpuid;
+        context_refiner.opt.use_vulkan_compute = use_gpu;
+        context_refiner.opt.use_fp16_packed = false;
+        context_refiner.opt.use_fp16_storage = false;
+        context_refiner.opt.use_fp16_arithmetic = false;
+        context_refiner.opt.use_bf16_packed = use_bf16;
+        context_refiner.opt.use_bf16_storage = use_bf16;
+        context_refiner.load_param("z_image_turbo_transformer_context_refiner.ncnn.param");
+        context_refiner.load_model("z_image_turbo_transformer_context_refiner.ncnn.bin");
 
-        ncnn::Extractor ex = noise_refiner.create_extractor();
+        ncnn::Extractor ex = context_refiner.create_extractor();
 
         ex.input("in0", cap_embed);
         ex.input("in1", cap_cos);
@@ -382,34 +407,59 @@ int main()
     // diffusion transformer loop
     {
         ncnn::Net t_embedder;
+        t_embedder.opt.vulkan_device_index = gpuid;
+        t_embedder.opt.use_vulkan_compute = use_gpu;
+        t_embedder.opt.use_fp16_packed = false;
+        t_embedder.opt.use_fp16_storage = false;
+        t_embedder.opt.use_fp16_arithmetic = false;
+        t_embedder.opt.use_bf16_packed = false;
+        t_embedder.opt.use_bf16_storage = false;
+        t_embedder.opt.use_bf16_packed = use_bf16;
+        t_embedder.opt.use_bf16_storage = use_bf16;
         t_embedder.load_param("z_image_turbo_transformer_t_embedder.ncnn.param");
         t_embedder.load_model("z_image_turbo_transformer_t_embedder.ncnn.bin");
 
         ncnn::Net all_x_embedder;
+        all_x_embedder.opt.vulkan_device_index = gpuid;
+        all_x_embedder.opt.use_vulkan_compute = use_gpu;
+        all_x_embedder.opt.use_fp16_packed = false;
+        all_x_embedder.opt.use_fp16_storage = false;
+        all_x_embedder.opt.use_fp16_arithmetic = false;
+        all_x_embedder.opt.use_bf16_packed = use_bf16;
+        all_x_embedder.opt.use_bf16_storage = use_bf16;
         all_x_embedder.load_param("z_image_turbo_transformer_all_x_embedder.ncnn.param");
         all_x_embedder.load_model("z_image_turbo_transformer_all_x_embedder.ncnn.bin");
 
         ncnn::Net noise_refiner;
-        // noise_refiner.opt.use_vulkan_compute = true;
-        // noise_refiner.opt.use_fp16_packed = false;
-        // noise_refiner.opt.use_fp16_storage = false;
-        // noise_refiner.opt.use_fp16_arithmetic = false;
+        noise_refiner.opt.vulkan_device_index = gpuid;
+        noise_refiner.opt.use_vulkan_compute = use_gpu;
+        noise_refiner.opt.use_fp16_packed = false;
+        noise_refiner.opt.use_fp16_storage = false;
+        noise_refiner.opt.use_fp16_arithmetic = false;
+        noise_refiner.opt.use_bf16_packed = use_bf16;
+        noise_refiner.opt.use_bf16_storage = use_bf16;
         noise_refiner.load_param("z_image_turbo_transformer_noise_refiner.ncnn.param");
         noise_refiner.load_model("z_image_turbo_transformer_noise_refiner.ncnn.bin");
 
         ncnn::Net unified_refiner;
-        // unified_refiner.opt.use_vulkan_compute = true;
-        // unified_refiner.opt.use_fp16_packed = false;
-        // unified_refiner.opt.use_fp16_storage = false;
-        // unified_refiner.opt.use_fp16_arithmetic = false;
+        unified_refiner.opt.vulkan_device_index = gpuid;
+        unified_refiner.opt.use_vulkan_compute = use_gpu;
+        unified_refiner.opt.use_fp16_packed = false;
+        unified_refiner.opt.use_fp16_storage = false;
+        unified_refiner.opt.use_fp16_arithmetic = false;
+        unified_refiner.opt.use_bf16_packed = use_bf16;
+        unified_refiner.opt.use_bf16_storage = use_bf16;
         unified_refiner.load_param("z_image_turbo_transformer_unified.ncnn.param");
         unified_refiner.load_model("z_image_turbo_transformer_unified.ncnn.bin");
 
         ncnn::Net all_final_layer;
-        // all_final_layer.opt.use_vulkan_compute = true;
-        // all_final_layer.opt.use_fp16_packed = false;
-        // all_final_layer.opt.use_fp16_storage = false;
-        // all_final_layer.opt.use_fp16_arithmetic = false;
+        all_final_layer.opt.vulkan_device_index = gpuid;
+        all_final_layer.opt.use_vulkan_compute = use_gpu;
+        all_final_layer.opt.use_fp16_packed = false;
+        all_final_layer.opt.use_fp16_storage = false;
+        all_final_layer.opt.use_fp16_arithmetic = false;
+        all_final_layer.opt.use_bf16_packed = use_bf16;
+        all_final_layer.opt.use_bf16_storage = use_bf16;
         all_final_layer.load_param("z_image_turbo_transformer_all_final_layer.ncnn.param");
         all_final_layer.load_model("z_image_turbo_transformer_all_final_layer.ncnn.bin");
 
@@ -549,6 +599,13 @@ int main()
         }
 
         ncnn::Net vae;
+        vae.opt.vulkan_device_index = gpuid;
+        vae.opt.use_vulkan_compute = use_gpu;
+        vae.opt.use_fp16_packed = false;
+        vae.opt.use_fp16_storage = false;
+        vae.opt.use_fp16_arithmetic = false;
+        vae.opt.use_bf16_packed = use_bf16;
+        vae.opt.use_bf16_storage = use_bf16;
         vae.load_param("z_image_turbo_vae.ncnn.param");
         vae.load_model("z_image_turbo_vae.ncnn.bin");
 
